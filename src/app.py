@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, Users, Films, Characters, Species, Planets
+from models import db, Users, Films, Characters, Species, Planets, FavouritesFilms, FavouritesPlanets, FavouritesCharacters, FavouritesSpecies, Favourites
 
 
 # Istancias de Flask
@@ -314,6 +314,402 @@ def handle_specie(id):
             response_body["message"] = "Specie not found"
             return response_body, 404
 
+
+@app.route("/users/<int:id>/favourites/films", methods=["GET", "POST"])
+def handle_favourites_films(id):
+    response_body = {}
+    user = db.session.get(Users, id)
+    favourite_films = (
+        db.session.query(Films)
+        .join(FavouritesFilms, FavouritesFilms.film_id == Films.id)
+        .filter(FavouritesFilms.user_id == user.id if user else None)
+        .all()
+    )
+    if not user:
+        response_body["message"] = "User not found"
+        return response_body, 404
+    else:
+        if request.method == "GET":
+            if favourite_films:
+                response_body["message"] = "Favourites films"
+                response_body["result"] = {
+                        "user_id": user.id,
+                        "email": user.email,
+                        "favourite_films": [film.serialize() for film in favourite_films]
+                    }
+                return response_body, 200
+            else:
+                response_body["message"] = "Error: User have no favourites films"
+                return response_body, 404
+        if request.method == "POST":
+            data = request.json
+            if "film_id" not in data:
+                response_body["message"] = "Error: insert the Film ID"
+                return response_body, 400
+            else:
+                film_id = data["film_id"]
+            existing_film = Films.query.get(film_id)
+            if not existing_film:
+                response_body["message"] = f"Error: film with ID {film_id} does no exist"
+                return response_body, 404
+            existing_favourite_film = FavouritesFilms.query.filter_by(user_id=user.id, film_id=film_id).first()
+            if existing_favourite_film:
+                response_body["message"] = "The film is already in the favourites"
+                return response_body, 400
+            else:
+                new_favourite_film = FavouritesFilms(user_id=user.id, film_id=film_id)
+                db.session.add(new_favourite_film)
+                db.session.commit()
+                response_body["message"] = "Film added in a favourites list"
+                response_body["result"] = {
+                    "email": user.email,
+                    "favourite_film": new_favourite_film.film.serialize()
+                }
+        return response_body, 201
+
+
+@app.route("/users/<int:id>/favourites/planets", methods=["GET", "POST"])
+def handle_favourites_planets(id):
+    response_body = {}
+    user = Users.query.get(id)
+    favourites_planets = (
+        db.session.query(Planets)
+        .join(FavouritesPlanets, FavouritesPlanets.planet_id == Planets.id)
+        .filter(FavouritesPlanets.user_id == user.id if user else None)
+        .all()
+    )
+    if not user:
+        response_body["message"] = "User not found"
+        return response_body, 404
+    else:
+        if request.method == "GET":
+            if favourites_planets:
+                response_body["message"] = "Favourites planets"
+                response_body["result"] = {
+                        "user_id": user.id,
+                        "email": user.email,
+                        "favourites_planets": [planet.serialize() for planet in favourites_planets]
+                    }
+                return response_body, 200
+            else:
+                response_body["message"] = "Error: User have no favourites planets"
+                return response_body, 404
+        if request.method == "POST":
+            data = request.json
+            if "planet_id" not in data:
+                response_body["message"] = "Error: insert the Planet ID"
+                return response_body, 400
+            else:
+                planet_id = data["planet_id"]
+            existing_planet = Planets.query.get(planet_id)
+            if not existing_planet:
+                response_body["message"] = f"Error: planet with ID {planet_id} does  no exist"
+                return response_body, 404
+            existing_favourite_planet = FavouritesPlanets.query.filter_by(user_id=user.id, planet_id=planet_id).first()
+            if existing_favourite_planet:
+                response_body["message"] = "The planet is already in the favourites"
+                return response_body, 400
+            else:
+                new_favourite_planet = FavouritesPlanets(user_id=user.id, planet_id=planet_id)
+                db.session.add(new_favourite_planet)
+                db.session.commit()
+                response_body["message"] = "Planets added in a favourites list"
+                response_body["result"] = {
+                    "user_id": user.id,
+                    "email": user.email,
+                    "favourite_planet": new_favourite_planet.planet.serialize()
+                }
+        return response_body, 201
+
+
+@app.route("/users/<int:id>/favourites/species", methods=["GET", "POST"])
+def handle_favourites_species(id):
+    response_body = {}
+    user = db.session.get(Users, id)
+    favourite_species = (
+        db.session.query(Species)
+        .join(FavouritesSpecies, FavouritesSpecies.specie_id == Species.id)
+        .filter(FavouritesSpecies.user_id == user.id)
+        .all()
+    )
+    if not user:
+        response_body["message"] = "User not found"
+        return response_body, 404
+    else:
+        if request.method == "GET":
+            if favourite_species:
+                response_body["message"] = "Favourites species"
+                response_body["result"] = {
+                        "user_id": user.id,
+                        "email": user.email,
+                        "favourite_species": [specie.serialize() for specie in favourite_species]
+                    }
+                return response_body, 200
+            else:
+                response_body["message"] = "Error: User have no favourites species"
+                return response_body, 404
+        if request.method == "POST":
+            data = request.json
+            if "specie_id" not in data:
+                response_body["message"] = "Error: insert the Specie ID"
+                return response_body, 400
+            else:
+                specie_id = data["specie_id"]
+            existing_specie = Species.query.get(specie_id)
+            if not existing_specie:
+                response_body["message"] = f"Error: specie with ID {specie_id} does no exist"
+                return response_body, 404
+            existing_favourite_specie = FavouritesSpecies.query.filter_by(user_id=user.id, specie_id=specie_id).first()
+            if existing_favourite_specie:
+                response_body["message"] = "The specie is already in the favourites"
+                return response_body, 400
+            else:
+                new_favourite_specie = FavouritesSpecies(user_id=user.id, specie_id=specie_id)
+                db.session.add(new_favourite_specie)
+                db.session.commit()
+                response_body["message"] = "Specie added in a favourites list"
+                response_body["result"] = {
+                    "email": user.email,
+                    "favourite_specie": new_favourite_specie.specie.serialize()
+                }
+        return response_body, 201
+
+
+@app.route("/users/<int:id>/favourites/characters", methods=["GET", "POST"])
+def handle_favourites_characters(id):
+    response_body = {}
+    user = db.session.get(Users, id)
+    favourite_characters = (
+        db.session.query(Characters)
+        .join(FavouritesCharacters, FavouritesCharacters.character_id == Characters.id)
+        .filter(FavouritesCharacters.user_id == user.id if user else None)
+        .all()
+    )
+    if not user:
+        response_body["message"] = "User not found"
+        return response_body, 404
+    else:
+        if request.method == "GET":
+            if favourite_characters:
+                response_body["message"] = "Favourites characters"
+                response_body["result"] = {
+                        "user_id": user.id,
+                        "email": user.email,
+                        "favourite_characters": [character.serialize() for character in favourite_characters]
+                    }
+                return response_body, 200
+            else:
+                response_body["message"] = "Error: User have no favourites characters"
+                return response_body, 404
+        if request.method == "POST":
+            data = request.json
+            if "character_id" not in data:
+                response_body["message"] = "Error: insert the character ID"
+                return response_body, 400
+            else:
+                character_id = data["character_id"]
+            existing_character = Characters.query.get(character_id)
+            if not existing_character:
+                response_body["message"] = f"Error: character with ID {character_id} does no exist"
+                return response_body, 404
+            existing_favourite_character = FavouritesCharacters.query.filter_by(user_id=user.id, character_id=character_id).first()
+            if existing_favourite_character:
+                response_body["message"] = "The character is already in the favourites"
+                return response_body, 400
+            else:
+                new_favourite_character = FavouritesCharacters(user_id=user.id, character_id=character_id)
+                db.session.add(new_favourite_character)
+                db.session.commit()
+                response_body["message"] = "Character added in a favourites list"
+                response_body["result"] = {
+                    "email": user.email,
+                    "favourite_character": new_favourite_character.character.serialize()
+                }
+        return response_body, 201
+
+    
+@app.route("/users/<int:id>/favourites")
+def handle_user_favourites(id):
+    response_body = {}
+    user = Users.query.get(id)
+    if not user:
+        response_body["message"] = "User not found"
+        return jsonify(response_body), 404
+    favourite_characters = (
+        db.session.query(Characters)
+        .join(FavouritesCharacters, FavouritesCharacters.character_id == Characters.id)
+        .filter(FavouritesCharacters.user_id == user.id if user else None)
+        .all()
+    )
+    favourite_species = (
+        db.session.query(Species)
+        .join(FavouritesSpecies, FavouritesSpecies.specie_id == Species.id)
+        .filter(FavouritesSpecies.user_id == user.id if user else None)
+        .all()
+    )
+    favourites_planets = (
+        db.session.query(Planets)
+        .join(FavouritesPlanets, FavouritesPlanets.planet_id == Planets.id)
+        .filter(FavouritesPlanets.user_id == user.id if user else None)
+        .all()
+    )
+    favourite_films = (
+        db.session.query(Films)
+        .join(FavouritesFilms, FavouritesFilms.film_id == Films.id)
+        .filter(FavouritesFilms.user_id == user.id if user else None)
+        .all()
+    )
+    response_body["message"] = "User's favourites"
+    response_body["result"] = {
+        "characters": [character.serialize() for character in favourite_characters],
+        "species": [specie.serialize() for specie in favourite_species],
+        "planets": [planet.serialize() for planet in favourites_planets],
+        "films": [film.serialize() for film in favourite_films],
+    }
+    if not (favourite_characters or favourite_species or favourites_planets or favourite_films):
+        response_body["message"] = "User have no favorites"
+        return jsonify(response_body), 404
+    response_body["message"] = "User's favourites"
+    response_body["result"] = {
+        "characters": [character.serialize() for character in favourite_characters],
+        "species": [specie.serialize() for specie in favourite_species],
+        "planets": [planet.serialize() for planet in favourites_planets],
+        "films": [film.serialize() for film in favourite_films],
+    }
+
+    return jsonify(response_body), 200
+
+
+@app.route("/users/<int:id>/favourites/films/<int:film_id>", methods=["DELETE"])
+def handle_delete_favourites_film(id, film_id):
+    response_body = {}
+    user = db.session.query(Users).get(id)
+    if not user:
+        response_body["message"] = "Error: User not found"
+        return response_body, 404
+    favourite_film = (
+        db.session.query(FavouritesFilms)
+        .filter_by(user_id=user.id, film_id=film_id)
+        .first()
+    )
+    if favourite_film:
+        db.session.delete(favourite_film)
+        db.session.commit()
+        user_favourite_films = (
+            db.session.query(Films)
+            .join(FavouritesFilms, FavouritesFilms.film_id == Films.id)
+            .filter(FavouritesFilms.user_id == user.id)
+            .all()
+        )
+        response_body["message"] = "Film removed from favorites"
+        response_body["result"] = {
+            "user_id": user.id,
+            "email": user.email,
+            "favourite_films": [film.serialize() for film in user_favourite_films]
+        }
+        return response_body, 200
+    else:
+        response_body["message"] = "Error: Film not found in user's favorites"
+        return response_body, 404
+
+
+@app.route("/users/<int:id>/favourites/planets/<int:planet_id>", methods=["DELETE"])
+def handle_delete_favourites_planet(id, planet_id):
+    response_body = {}
+    user = db.session.query(Users).get(id)
+    if not user:
+        response_body["message"] = "Error: User not found"
+        return response_body, 404
+    favourite_planet = (
+        db.session.query(FavouritesPlanets)
+        .filter_by(user_id=user.id, planet_id=planet_id)
+        .first()
+    )
+    if favourite_planet:
+        db.session.delete(favourite_planet)
+        db.session.commit()
+        user_favourite_planets = (
+            db.session.query(Planets)
+            .join(FavouritesPlanets, FavouritesPlanets.planet_id == Planets.id)
+            .filter(FavouritesPlanets.user_id == user.id)
+            .all()
+        )
+        response_body["message"] = "Planet removed from favorites"
+        response_body["result"] = {
+            "user_id": user.id,
+            "email": user.email,
+            "favourite_planet": [planet.serialize() for planet in user_favourite_planets]
+        }
+        return response_body, 200
+    else:
+        response_body["message"] = "Error: Planet not found in user's favorites"
+        return response_body, 404
+
+
+@app.route("/users/<int:id>/favourites/species/<int:specie_id>", methods=["DELETE"])
+def handle_delete_favourites_specie(id, specie_id):
+    response_body = {}
+    user = db.session.query(Users).get(id)
+    if not user:
+        response_body["message"] = "Error: User not found"
+        return response_body, 404
+    favourite_specie = (
+        db.session.query(FavouritesSpecies)
+        .filter_by(user_id=user.id, specie_id=specie_id)
+        .first()
+    )
+    if favourite_specie:
+        db.session.delete(favourite_specie)
+        db.session.commit()
+        user_favourite_species = (
+            db.session.query(Planets)
+            .join(FavouritesSpecies, FavouritesSpecies.specie_id == Species.id)
+            .filter(FavouritesSpecies.user_id == user.id)
+            .all()
+        )
+        response_body["message"] = "Species removed from favorites"
+        response_body["result"] = {
+            "user_id": user.id,
+            "email": user.email,
+            "favourite_specie": [specie.serialize() for specie in user_favourite_species]
+        }
+        return response_body, 200
+    else:
+        response_body["message"] = "Error: Species not found in user's favorites"
+        return response_body, 404
+
+
+@app.route("/users/<int:id>/favourites/characters/<int:character_id>", methods=["DELETE"])
+def handle_delete_favourites_character(id, character_id):
+    response_body = {}
+    user = db.session.query(Users).get(id)
+    if not user:
+        response_body["message"] = "Error: User not found"
+        return response_body, 404
+    favourite_character = (
+        db.session.query(FavouritesCharacters)
+        .filter_by(user_id=user.id, character_id=character_id)
+        .first()
+    )
+    if favourite_character:
+        db.session.delete(favourite_character)
+        db.session.commit()
+        user_favourite_characters = (
+            db.session.query(Characters)
+            .join(FavouritesCharacters, FavouritesCharacters.character_id == Characters.id)
+            .filter(FavouritesCharacters.user_id == user.id)
+            .all()
+        )
+        response_body["message"] = "Characters removed from favorites"
+        response_body["result"] = {
+            "user_id": user.id,
+            "email": user.email,
+            "favourite_character": [character.serialize() for character in user_favourite_characters]
+        }
+        return response_body, 200
+    else:
+        response_body["message"] = "Error: Characters not found in user's favorites"
+        return response_body, 404
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
