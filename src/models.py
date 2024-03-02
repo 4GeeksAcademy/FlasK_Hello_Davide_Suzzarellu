@@ -90,7 +90,6 @@ class FavouritesFilms(db.Model):
 
     def serialize(self):
         return {
-            "id": self.id,
             "user": self.user_id,
             "film": self.film_id
         } 
@@ -108,7 +107,6 @@ class FavouritesPlanets(db.Model):
 
     def serialize(self):
         return {
-            "id": self.id,
             "user": self.user_id,
             "planet": self.planet_id
         } 
@@ -126,7 +124,6 @@ class FavouritesCharacters(db.Model):
 
     def serialize(self):
         return {
-            "id": self.id,
             "user": self.user_id,
             "character": self.character_id
         }   
@@ -144,7 +141,6 @@ class FavouritesSpecies(db.Model):
 
     def serialize(self):
         return {
-            "id": self.id,
             "user": self.user_id,
             "specie": self.specie_id
         }   
