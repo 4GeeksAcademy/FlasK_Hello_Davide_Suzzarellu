@@ -559,25 +559,18 @@ def handle_user_favourites(id):
         .filter(FavouritesFilms.user_id == user.id if user else None)
         .all()
     )
-    response_body["message"] = "User's favourites"
-    response_body["result"] = {
-        "characters": [character.serialize() for character in favourite_characters],
-        "species": [specie.serialize() for specie in favourite_species],
-        "planets": [planet.serialize() for planet in favourites_planets],
-        "films": [film.serialize() for film in favourite_films],
-    }
     if not (favourite_characters or favourite_species or favourites_planets or favourite_films):
         response_body["message"] = "User have no favorites"
         return jsonify(response_body), 404
-    response_body["message"] = "User's favourites"
-    response_body["result"] = {
-        "characters": [character.serialize() for character in favourite_characters],
-        "species": [specie.serialize() for specie in favourite_species],
-        "planets": [planet.serialize() for planet in favourites_planets],
-        "films": [film.serialize() for film in favourite_films],
-    }
-
-    return jsonify(response_body), 200
+    else:
+        response_body["message"] = "User's favourites"
+        response_body["result"] = {
+            "characters": [character.serialize() for character in favourite_characters],
+            "species": [specie.serialize() for specie in favourite_species],
+            "planets": [planet.serialize() for planet in favourites_planets],
+            "films": [film.serialize() for film in favourite_films],
+        }
+        return jsonify(response_body), 200
 
 
 @app.route("/users/<int:id>/favourites/films/<int:film_id>", methods=["DELETE", "GET"])
